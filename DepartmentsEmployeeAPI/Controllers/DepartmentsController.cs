@@ -9,6 +9,8 @@ using DepartmentsEmployeeAPI.Models;
 using Microsoft.AspNetCore.Http;
 namespace DepartmentEmployeesExample.Controllers
 {
+    // Thanks to Seth Oakley for this starter code.
+
     [Route("api/[controller]")]
     [ApiController]
     public class DepartmentController : ControllerBase
