@@ -28,16 +28,19 @@ namespace DepartmentEmployeesExample.Controllers
             }
         }
         [HttpGet]
-        public async Task<IActionResult> Get()
+        public async Task<IActionResult> Get(string q)
         {
             using (SqlConnection conn = Connection)
             {
                 conn.Open();
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = @"SELECT d.Id, d.DeptName, e.FirstName, e.LastName, e.DepartmentId, e.Id as EmployeeId
+                    cmd.CommandText = @"SELECT d.Id, d.DeptName, e.FirstName, e.LastName, e.DepartmentId,                   e.Id as EmployeeId
                                         FROM Department d
-                                        LEFT JOIN Employee e ON d.Id = e.DepartmentId";
+                                        LEFT JOIN Employee e ON d.Id = e.DepartmentId
+                                        WHERE d.DeptName LIKE @q";
+
+                    cmd.Parameters.Add(new SqlParameter("@q", "%" + q + "%"));
                     SqlDataReader reader = cmd.ExecuteReader();
                     List<Department> departments = new List<Department>();
                     while (reader.Read())
@@ -127,6 +130,39 @@ namespace DepartmentEmployeesExample.Controllers
                 }
             }
         }
+
+        // We can make custom routes by using the `Route` annotation. NOTE: Do NOT put a leading slash in the URL
+        [HttpGet]
+        [Route("employeeCount")]
+        public async Task<IActionResult> GetSomethingCrazy()
+        {
+            using (SqlConnection conn = Connection)
+            {
+                conn.Open();
+                using (SqlCommand cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = @"SELECT d.DeptName, d.Id, COUNT(e.Id) as EmployeeCount
+                                        FROM Department d
+                                        LEFT JOIN Employee e ON d.Id = e.DepartmentId
+                                        GROUP BY d.DeptName, d.Id";
+                    
+                    SqlDataReader reader = cmd.ExecuteReader();
+                    var deptEmpCount = new List<DepartmentEmployeeCount>();
+                    while (reader.Read())
+                    {
+                        deptEmpCount.Add(new DepartmentEmployeeCount
+                        {
+                            DepartmentId = reader.GetInt32(reader.GetOrdinal("Id")),
+                            DepartmentName = reader.GetString(reader.GetOrdinal("DeptName")),
+                            EmployeeCount = reader.GetInt32(reader.GetOrdinal("EmployeeCount"))
+                        });
+                    }
+                    reader.Close();
+                    return Ok(deptEmpCount);
+                }
+            }
+        }
+
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] Department department)
         {
