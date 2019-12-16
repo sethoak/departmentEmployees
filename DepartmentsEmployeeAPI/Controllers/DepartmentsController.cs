@@ -35,7 +35,7 @@ namespace DepartmentEmployeesExample.Controllers
                 conn.Open();
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = @"SELECT d.Id, d.DeptName, e.FirstName, e.LastName, e.DepartmentId,                   e.Id as EmployeeId
+                    cmd.CommandText = @"SELECT d.Id, d.DeptName, e.FirstName, e.LastName, e.DepartmentId, e.Id as EmployeeId
                                         FROM Department d
                                         LEFT JOIN Employee e ON d.Id = e.DepartmentId
                                         WHERE d.DeptName LIKE @q";
@@ -105,7 +105,7 @@ namespace DepartmentEmployeesExample.Controllers
                                         LEFT JOIN Employee e ON d.Id = e.DepartmentId
                                         WHERE d.Id = @id";
                     cmd.Parameters.Add(new SqlParameter("@id", id));
-                    SqlDataReader reader = cmd.ExecuteReader();
+                    SqlDataReader reader = await cmd.ExecuteReaderAsync();
                     Department department = null;
                     while (reader.Read())
                     {
@@ -146,7 +146,8 @@ namespace DepartmentEmployeesExample.Controllers
                                         LEFT JOIN Employee e ON d.Id = e.DepartmentId
                                         GROUP BY d.DeptName, d.Id";
                     
-                    SqlDataReader reader = cmd.ExecuteReader();
+
+                    SqlDataReader reader = await cmd.ExecuteReaderAsync();
                     var deptEmpCount = new List<DepartmentEmployeeCount>();
                     while (reader.Read())
                     {
@@ -175,7 +176,7 @@ namespace DepartmentEmployeesExample.Controllers
                                         OUTPUT INSERTED.Id
                                         VALUES (@DeptName)";
                     cmd.Parameters.Add(new SqlParameter("@DeptName", department.DeptName));
-                    int newId = (int)cmd.ExecuteScalar();
+                    int newId = (int) await cmd.ExecuteScalarAsync();
                     department.Id = newId;
                     return CreatedAtRoute("GetDepartment", new { id = newId }, department);
                 }
@@ -193,7 +194,7 @@ namespace DepartmentEmployeesExample.Controllers
                     {
                         cmd.CommandText = @"DELETE FROM Department WHERE Id = @id";
                         cmd.Parameters.Add(new SqlParameter("@id", id));
-                        int rowsAffected = cmd.ExecuteNonQuery();
+                        int rowsAffected = await cmd.ExecuteNonQueryAsync();
                         if (rowsAffected > 0)
                         {
                             return new StatusCodeResult(StatusCodes.Status204NoContent);
@@ -204,7 +205,8 @@ namespace DepartmentEmployeesExample.Controllers
             }
             catch (Exception)
             {
-                if (!DepartmentExists(id))
+                bool exists = await DepartmentExists(id);
+                if (!exists)
                 {
                     return NotFound();
                 }
@@ -214,7 +216,7 @@ namespace DepartmentEmployeesExample.Controllers
                 }
             }
         }
-        private bool DepartmentExists(int id)
+        private async Task<bool> DepartmentExists(int id)
         {
             using (SqlConnection conn = Connection)
             {
@@ -223,7 +225,7 @@ namespace DepartmentEmployeesExample.Controllers
                 {
                     cmd.CommandText = @"SELECT Id FROM Department WHERE Id = @id";
                     cmd.Parameters.Add(new SqlParameter("@id", id));
-                    SqlDataReader reader = cmd.ExecuteReader();
+                    SqlDataReader reader = await cmd.ExecuteReaderAsync();
                     return reader.Read();
                 }
             }
